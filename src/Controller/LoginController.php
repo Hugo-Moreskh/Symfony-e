@@ -13,45 +13,43 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class LoginController extends AbstractController
 {
-    #[Route('/api/login', name: 'user_login', methods: ['POST'])]
-    public function login(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $passwordHasher
-    ): JsonResponse {
-        // Récupérer les données JSON de la requête
-        $data = json_decode($request->getContent(), true);
-        
-        if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
+    #[Route('/login', name: 'user_login_form', methods: ['GET'])]
+        public function showLoginForm(): Response
+        {
+            return $this->render('login/login.html.twig', [
+                'error' => null
+            ]);
         }
-        
-        // Vérifier que les champs requis sont présents
-        if (!isset($data['email']) || !isset($data['password'])) {
-            return new JsonResponse(['error' => 'Email and password are required'], Response::HTTP_BAD_REQUEST);
+
+
+    #[Route('/login', name: 'user_login', methods: ['POST'])]
+        public function login(
+            Request $request,
+            EntityManagerInterface $entityManager,
+            UserPasswordHasherInterface $passwordHasher
+        ): Response {
+            // Récupérer les données du formulaire (pas JSON)
+            $email = $request->request->get('email');
+            $password = $request->request->get('password');
+
+            if (!$email || !$password) {
+                return $this->render('login/login.html.twig', [
+                    'error' => 'Email et mot de passe requis.'
+                ]);
+            }
+
+            // Rechercher l'utilisateur par email
+            $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+
+            if (!$user || !$passwordHasher->isPasswordValid($user, $password)) {
+                return $this->render('login/login.html.twig', [
+                    'error' => 'Identifiants invalides.'
+                ]);
+            }
+
+            // Connexion réussie : redirection vers une page protégée ou message
+            return $this->redirectToRoute('app');
+            
         }
-        
-        // Rechercher l'utilisateur par email
-        $userRepository = $entityManager->getRepository(User::class);
-        $user = $userRepository->findOneBy(['email' => $data['email']]);
-        
-        if (!$user) {
-            return new JsonResponse(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
-        }
-        
-        // Vérifier le mot de passe
-        if (!$passwordHasher->isPasswordValid($user, $data['password'])) {
-            return new JsonResponse(['error' => 'Invalid credentials'], Response::HTTP_UNAUTHORIZED);
-        }
-        
-        // Connexion réussie
-        return new JsonResponse([
-            'message' => 'Login successful',
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'name' => $user->getName()
-            ]
-        ], Response::HTTP_OK);
-    }
+
 }

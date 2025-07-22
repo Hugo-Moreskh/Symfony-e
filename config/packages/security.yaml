@@ -32,6 +32,7 @@ security:
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
             provider: app_user_provider
+            custom_authenticator: App\Security\LoginFormAuthenticator
 
         # Firewall pour routes protégées par JWT
         api:
@@ -43,11 +44,10 @@ security:
     access_control:
         # Routes publiques
         - { path: ^/register, roles: PUBLIC_ACCESS }
-        - { path: ^/health, roles: PUBLIC_ACCESS }
-        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/app, roles: PUBLIC_ACCESS }
 
         # Routes utilisateur authentifié
-        - { path: ^/user/profile, roles: ROLE_USER }
         - { path: ^/publication, roles: ROLE_USER }
         - { path: ^/comment, roles: ROLE_USER }
 
