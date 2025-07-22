@@ -13,7 +13,7 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class LoginController extends AbstractController
 {
-    #[Route('/user/login', name: 'user_login', methods: ['POST'])]
+    #[Route('/api/login', name: 'user_login', methods: ['POST'])]
     public function login(
         Request $request,
         EntityManagerInterface $entityManager,

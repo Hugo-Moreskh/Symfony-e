@@ -34,7 +34,7 @@ class PublicationController extends AbstractController
         
         // Rechercher l'utilisateur
         $userRepository = $entityManager->getRepository(User::class);
-        $user = $userRepository->find($data['user_id']);
+        $user = $this->getUser();
         
         if (!$user) {
             return new JsonResponse(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
