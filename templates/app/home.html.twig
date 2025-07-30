@@ -3,9 +3,12 @@
 {% block title %}Accueil - Twitter-like{% endblock %}
 
 {% block body %}
+
+
+
     <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
         <h1>🐦 Twitter-like</h1>
-        
+        <div {{ react_component('Hello', { 'fullName': 'Hugo' }) }}></div>
         {% for message in app.flashes('success') %}
             <div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; margin: 10px 0; border-radius: 5px;">
                 {{ message }}
@@ -63,6 +66,9 @@
                 </a>
             </div>
         {% endif %}
+
+        <!-- Composant React -->
+        <div {{ react_component('Hello', { 'fullName': user ? user.name : 'Visiteur' }) }}></div>
 
         <!-- Fil d'actualité -->
         <div>
