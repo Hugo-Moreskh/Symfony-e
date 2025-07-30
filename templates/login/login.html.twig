@@ -1,13 +1,43 @@
-{# templates/login/login.html.twig #}
+{% extends 'base.html.twig' %}
 
-<h1>Connexion</h1>
+{% block title %}Connexion{% endblock %}
 
-<form method="POST" action="{{ path('user_login') }}">
-    <input type="email" name="email" placeholder="Email" required>
-    <input type="password" name="password" placeholder="Mot de passe" required>
-    <button type="submit">Se connecter</button>
-</form>
+{% block body %}
+    <div style="max-width: 400px; margin: 50px auto; padding: 20px;">
+        <h1>Connexion</h1>
 
-{% if error %}
-    <p style="color: red;">{{ error }}</p>
-{% endif %}
+        {% for message in app.flashes('success') %}
+            <div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% if error %}
+            <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{{ path('user_login_form') }}">
+            <div style="margin-bottom: 15px;">
+                <label>Email :</label>
+                <input type="email" name="_username" placeholder="Email" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Mot de passe :</label>
+                <input type="password" name="_password" placeholder="Mot de passe" required
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            <button type="submit" style="background: #1da1f2; color: white; border: none; padding: 10px 20px; border-radius: 5px; width: 100%;">
+                Se connecter
+            </button>
+        </form>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <a href="{{ path('app_register_form') }}" style="color: #1da1f2; text-decoration: none;">
+                Pas encore de compte ? S'inscrire
+            </a>
+        </div>
+    </div>
+{% endblock %}

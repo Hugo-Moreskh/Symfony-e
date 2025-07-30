@@ -19,46 +19,60 @@ class PublicationController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         ValidatorInterface $validator
-    ): JsonResponse {
-        // Récupérer les données JSON de la requête
-        $data = json_decode($request->getContent(), true);
-        
-        if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
-        }
-        
-        // Vérifier que les champs requis sont présents
-        if (!isset($data['user_id']) || !isset($data['content'])) {
-            return new JsonResponse(['error' => 'user_id and content are required'], Response::HTTP_BAD_REQUEST);
-        }
-        
-        // Rechercher l'utilisateur
-        $userRepository = $entityManager->getRepository(User::class);
+    ): Response {
+        // Vérifier que l'utilisateur est connecté
         $user = $this->getUser();
-        
         if (!$user) {
-            return new JsonResponse(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
+            return $this->redirectToRoute('user_login_form');
+        }
+        
+        // Récupérer le contenu du formulaire
+        $content = $request->request->get('content');
+        
+        if (!$content) {
+            $this->addFlash('error', 'Le contenu est requis.');
+            return $this->redirectToRoute('app');
         }
         
         // Créer une nouvelle publication
         $publication = new Publication();
         $publication->setUser($user);
-        $publication->setContent($data['content']);
-        $publication->setCreatedAt(new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'))); // Ajout de \ devant DateTimeZone
+        $publication->setContent($content);
+        $publication->setCreatedAt(new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')));
         
-        // Ajouter le media_path si fourni
-        if (isset($data['media_path'])) {
-            $publication->setMediaPath($data['media_path']);
+        // Gérer l'upload de média
+        $mediaFile = $request->files->get('media');
+        if ($mediaFile) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+            
+            if (in_array($mediaFile->getMimeType(), $allowedTypes)) {
+                $originalFilename = pathinfo($mediaFile->getClientOriginalName(), PATHINFO_FILENAME);
+                $safeFilename = transliterator_transliterate('Any-Latin; Latin-ASCII; [^A-Za-z0-9_] remove; Lower()', $originalFilename);
+                $newFilename = $safeFilename.'-'.uniqid().'.'.$mediaFile->guessExtension();
+
+                try {
+                    $uploadsDirectory = $this->getParameter('kernel.project_dir').'/public/uploads';
+                    if (!is_dir($uploadsDirectory)) {
+                        mkdir($uploadsDirectory, 0755, true);
+                    }
+                    $mediaFile->move($uploadsDirectory, $newFilename);
+                    $publication->setMediaPath($newFilename);
+                } catch (\Exception $e) {
+                    $this->addFlash('error', 'Erreur lors de l\'upload du fichier.');
+                }
+            } else {
+                $this->addFlash('error', 'Type de fichier non autorisé. Utilisez JPG, PNG, GIF, WebP, MP4 ou WebM.');
+                return $this->redirectToRoute('app');
+            }
         }
         
         // Valider l'entité
         $errors = $validator->validate($publication);
         if (count($errors) > 0) {
-            $errorMessages = [];
             foreach ($errors as $error) {
-                $errorMessages[] = $error->getMessage();
+                $this->addFlash('error', $error->getMessage());
             }
-            return new JsonResponse(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
+            return $this->redirectToRoute('app');
         }
         
         try {
@@ -66,25 +80,12 @@ class PublicationController extends AbstractController
             $entityManager->persist($publication);
             $entityManager->flush();
             
-            return new JsonResponse([
-                'message' => 'Publication created successfully',
-                'publication' => [
-                    'id' => $publication->getId(),
-                    'content' => $publication->getContent(),
-                    'media_path' => $publication->getMediaPath(),
-                    'created_at' => $publication->getCreatedAt()->format('Y-m-d H:i:s'),
-                    'user' => [
-                        'id' => $publication->getUser()->getId(),
-                        'email' => $publication->getUser()->getEmail(),
-                        'name' => $publication->getUser()->getName()
-                    ]
-                ]
-            ], Response::HTTP_CREATED);
+            $this->addFlash('success', 'Publication créée avec succès !');
             
         } catch (\Exception $e) {
-            return new JsonResponse([
-                'error' => 'Publication creation failed: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->addFlash('error', 'Erreur lors de la création : ' . $e->getMessage());
         }
+        
+        return $this->redirectToRoute('app');
     }
 }

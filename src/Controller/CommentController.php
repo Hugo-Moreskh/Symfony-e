@@ -22,50 +22,45 @@ class CommentController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         ValidatorInterface $validator
-    ): JsonResponse {
-        // Récupérer les données JSON de la requête
-        $data = json_decode($request->getContent(), true);
-        
-        if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
-        }
-        
-        // Vérifier que les champs requis sont présents
-        if (!isset($data['user_id']) || !isset($data['publication_id']) || !isset($data['content'])) {
-            return new JsonResponse(['error' => 'user_id, publication_id and content are required'], Response::HTTP_BAD_REQUEST);
-        }
-        
-        // Rechercher l'utilisateur
-        $userRepository = $entityManager->getRepository(User::class);
-        $user = $userRepository->find($data['user_id']);
-        
+    ): Response {
+        // Vérifier que l'utilisateur est connecté
+        $user = $this->getUser();
         if (!$user) {
-            return new JsonResponse(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
+            return $this->redirectToRoute('user_login_form');
+        }
+        
+        // Récupérer les données du formulaire
+        $publicationId = $request->request->get('publication_id');
+        $content = $request->request->get('content');
+        
+        if (!$publicationId || !$content) {
+            $this->addFlash('error', 'Tous les champs sont requis.');
+            return $this->redirectToRoute('app');
         }
         
         // Rechercher la publication
         $publicationRepository = $entityManager->getRepository(Publication::class);
-        $publication = $publicationRepository->find($data['publication_id']);
+        $publication = $publicationRepository->find($publicationId);
         
         if (!$publication) {
-            return new JsonResponse(['error' => 'Publication not found'], Response::HTTP_NOT_FOUND);
+            $this->addFlash('error', 'Publication non trouvée.');
+            return $this->redirectToRoute('app');
         }
         
         // Créer un nouveau commentaire
         $comment = new Comment();
         $comment->setUser($user);
         $comment->setPublication($publication);
-        $comment->setContent($data['content']);
+        $comment->setContent($content);
         $comment->setCreatedAt(new DateTimeImmutable('now', new DateTimeZone('Europe/Paris')));
         
         // Valider l'entité
         $errors = $validator->validate($comment);
         if (count($errors) > 0) {
-            $errorMessages = [];
             foreach ($errors as $error) {
-                $errorMessages[] = $error->getMessage();
+                $this->addFlash('error', $error->getMessage());
             }
-            return new JsonResponse(['errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
+            return $this->redirectToRoute('app');
         }
         
         try {
@@ -73,28 +68,12 @@ class CommentController extends AbstractController
             $entityManager->persist($comment);
             $entityManager->flush();
             
-            return new JsonResponse([
-                'message' => 'Comment created successfully',
-                'comment' => [
-                    'id' => $comment->getId(),
-                    'content' => $comment->getContent(),
-                    'created_at' => $comment->getCreatedAt()->format('Y-m-d H:i:s'),
-                    'user' => [
-                        'id' => $comment->getUser()->getId(),
-                        'email' => $comment->getUser()->getEmail(),
-                        'name' => $comment->getUser()->getName()
-                    ],
-                    'publication' => [
-                        'id' => $comment->getPublication()->getId(),
-                        'content' => substr($comment->getPublication()->getContent(), 0, 50) . '...' // Aperçu du contenu
-                    ]
-                ]
-            ], Response::HTTP_CREATED);
+            $this->addFlash('success', 'Commentaire ajouté avec succès !');
             
         } catch (\Exception $e) {
-            return new JsonResponse([
-                'error' => 'Comment creation failed: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->addFlash('error', 'Erreur lors de la création du commentaire : ' . $e->getMessage());
         }
+        
+        return $this->redirectToRoute('app');
     }
 }

@@ -3,14 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Security\LoginFormAuthenticator; // ton authenticator
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class RegistrationController extends AbstractController
@@ -28,9 +26,7 @@ class RegistrationController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $entityManager,
-        ValidatorInterface $validator,
-        UserAuthenticatorInterface $userAuthenticator,       // ajouté
-        LoginFormAuthenticator $authenticator                 // ajouté
+        ValidatorInterface $validator
     ): Response {
         $email = $request->request->get('email');
         $password = $request->request->get('password');
@@ -66,12 +62,8 @@ class RegistrationController extends AbstractController
             $entityManager->persist($user);
             $entityManager->flush();
 
-            // Connexion automatique puis redirection vers la route 'app' ("/")
-            return $userAuthenticator->authenticateUser(
-                $user,
-                $authenticator,
-                $request,
-            );
+            $this->addFlash('success', 'Inscription réussie ! Connectez-vous maintenant.');
+            return $this->redirectToRoute('user_login_form');
 
         } catch (\Exception $e) {
             return $this->render('register/register.html.twig', [

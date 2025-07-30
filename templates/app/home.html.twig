@@ -1,0 +1,199 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Accueil - Twitter-like{% endblock %}
+
+{% block body %}
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        <h1>🐦 Twitter-like</h1>
+        
+        {% for message in app.flashes('success') %}
+            <div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+        
+        {% for message in app.flashes('error') %}
+            <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% if user %}
+            <!-- Formulaire de création de publication -->
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                <h3>Que se passe-t-il ?</h3>
+                <form method="post" action="{{ path('create_publication') }}" enctype="multipart/form-data">
+                    <textarea name="content" placeholder="Quoi de neuf ?" rows="3" 
+                              style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"
+                              maxlength="280" required></textarea>
+                    
+                    <!-- Upload de média -->
+                    <div style="margin: 10px 0;">
+                        <label style="display: flex; align-items: center; color: #1da1f2; cursor: pointer;">
+                            📷 Ajouter une photo/vidéo
+                            <input type="file" name="media" accept="image/*,video/*" style="display: none;" onchange="showFileName(this)">
+                        </label>
+                        <span id="fileName" style="color: #657786; font-size: 12px; margin-left: 20px;"></span>
+                    </div>
+                    
+                    <div style="margin-top: 10px; text-align: right;">
+                        <span id="charCount" style="color: #657786; margin-right: 15px;">280</span>
+                        <button type="submit" style="background: #1da1f2; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer;">
+                            Publier
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bouton de déconnexion -->
+            <div style="text-align: right; margin-bottom: 20px;">
+                <span>Connecté en tant que <strong>{{ user.name ?? user.email }}</strong></span>
+                <a href="{{ path('app_logout') }}" style="margin-left: 15px; color: #1da1f2; text-decoration: none;">Se déconnecter</a>
+            </div>
+        {% else %}
+            <!-- Invitation à se connecter -->
+            <div style="background: #e1f5fe; padding: 20px; border-radius: 10px; margin-bottom: 30px; text-align: center;">
+                <h3>Rejoignez la conversation !</h3>
+                <p>Connectez-vous pour publier et commenter.</p>
+                <a href="{{ path('user_login_form') }}" style="background: #1da1f2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 20px; margin-right: 10px;">
+                    Se connecter
+                </a>
+                <a href="{{ path('app_register_form') }}" style="background: #17bf63; color: white; padding: 10px 20px; text-decoration: none; border-radius: 20px;">
+                    S'inscrire
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- Fil d'actualité -->
+        <div>
+            <h2>📰 Fil d'actualité</h2>
+            
+            {% if publications is empty %}
+                <div style="text-align: center; padding: 40px; color: #657786;">
+                    <p>Aucune publication pour le moment. Soyez le premier à publier quelque chose !</p>
+                </div>
+            {% else %}
+                {% for publication in publications %}
+                    <div style="border: 1px solid #e1e8ed; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: white;">
+                        <!-- En-tête de la publication -->
+                        <div style="margin-bottom: 10px;">
+                            <strong>{{ publication.user.name ?? publication.user.email }}</strong>
+                            <span style="color: #657786; margin-left: 10px;">
+                                {{ publication.createdAt|date('d/m/Y à H:i') }}
+                            </span>
+                        </div>
+                        
+                        <!-- Contenu de la publication -->
+                        <div style="margin-bottom: 15px; line-height: 1.4;">
+                            {{ publication.content|nl2br }}
+                        </div>
+                        
+                        <!-- Média si présent -->
+                        {% if publication.mediaPath %}
+                            <div style="margin-bottom: 15px;">
+                                {% set extension = publication.mediaPath|split('.')|last|lower %}
+                                {% if extension in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+                                    <img src="{{ asset('uploads/' ~ publication.mediaPath) }}" 
+                                         style="max-width: 100%; height: auto; border-radius: 10px; border: 1px solid #e1e8ed;" 
+                                         alt="Image partagée">
+                                {% elseif extension in ['mp4', 'webm', 'ogg'] %}
+                                    <video controls style="max-width: 100%; height: auto; border-radius: 10px; border: 1px solid #e1e8ed;">
+                                        <source src="{{ asset('uploads/' ~ publication.mediaPath) }}" type="video/{{ extension }}">
+                                        Votre navigateur ne supporte pas la lecture vidéo.
+                                    </video>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Actions -->
+                        <div style="border-top: 1px solid #e1e8ed; padding-top: 10px;">
+                            <span style="color: #657786;">
+                                💬 {{ publication.comments|length }} commentaire(s)
+                            </span>
+                            
+                            {% if user %}
+                                <button onclick="toggleCommentForm({{ publication.id }})" 
+                                        style="background: none; border: none; color: #1da1f2; cursor: pointer; margin-left: 15px;">
+                                    Commenter
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Formulaire de commentaire (caché par défaut) -->
+                        {% if user %}
+                            <div id="commentForm{{ publication.id }}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e8ed;">
+                                <form method="post" action="{{ path('create_comment') }}">
+                                    <input type="hidden" name="publication_id" value="{{ publication.id }}">
+                                    <textarea name="content" placeholder="Écrivez un commentaire..." rows="2" 
+                                              style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;" 
+                                              required></textarea>
+                                    <div style="margin-top: 8px; text-align: right;">
+                                        <button type="submit" style="background: #1da1f2; color: white; border: none; padding: 6px 15px; border-radius: 15px; cursor: pointer;">
+                                            Commenter
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Liste des commentaires -->
+                        {% if publication.comments is not empty %}
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e8ed;">
+                                {% for comment in publication.comments %}
+                                    <div style="background: #f7f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+                                        <div style="margin-bottom: 5px;">
+                                            <strong style="font-size: 14px;">{{ comment.user.name ?? comment.user.email }}</strong>
+                                            <span style="color: #657786; font-size: 12px; margin-left: 8px;">
+                                                {{ comment.createdAt|date('d/m/Y à H:i') }}
+                                            </span>
+                                        </div>
+                                        <div style="font-size: 14px; line-height: 1.3;">
+                                            {{ comment.content|nl2br }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Compteur de caractères pour les publications
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.querySelector('textarea[name="content"]');
+            const charCount = document.getElementById('charCount');
+            
+            if (textarea && charCount) {
+                textarea.addEventListener('input', function() {
+                    const remaining = 280 - this.value.length;
+                    charCount.textContent = remaining;
+                    charCount.style.color = remaining < 20 ? '#e0245e' : '#657786';
+                });
+            }
+        });
+
+        // Toggle formulaire de commentaire
+        function toggleCommentForm(publicationId) {
+            const form = document.getElementById('commentForm' + publicationId);
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                form.querySelector('textarea').focus();
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        // Afficher le nom du fichier sélectionné
+        function showFileName(input) {
+            const fileName = document.getElementById('fileName');
+            if (input.files && input.files[0]) {
+                fileName.textContent = '📎 ' + input.files[0].name;
+            } else {
+                fileName.textContent = '';
+            }
+        }
+    </script>
+{% endblock %}

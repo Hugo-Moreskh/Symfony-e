@@ -2,7 +2,6 @@ security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
             algorithm: auto
-            cost: 15
 
     providers:
         app_user_provider:
@@ -11,51 +10,28 @@ security:
                 property: email
 
     firewalls:
-        # Pour le dev
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
-        # Routes publiques : inscription, login, etc.
-        public_api:
-            pattern: ^/(register|health)$
-            security: false
-
-        # Firewall pour login JWT
-        login:
-            pattern: ^/api/login
-            stateless: true
-            json_login:
-                check_path: /api/login
-                username_path: email
-                password_path: password
-                success_handler: lexik_jwt_authentication.handler.authentication_success
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+        main:
+            lazy: true
             provider: app_user_provider
-            custom_authenticator: App\Security\LoginFormAuthenticator
-
-        # Firewall pour routes protégées par JWT
-        api:
-            pattern: ^/api
-            stateless: true
-            provider: app_user_provider
-            jwt: ~
+            form_login:
+                login_path: user_login_form
+                check_path: user_login_form
+                default_target_path: app
+                always_use_default_target_path: true
+            logout:
+                path: app_logout
+                target: app
 
     access_control:
-        # Routes publiques
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
-        - { path: ^/app, roles: PUBLIC_ACCESS }
-
-        # Routes utilisateur authentifié
+        - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/publication, roles: ROLE_USER }
         - { path: ^/comment, roles: ROLE_USER }
-
-        # Routes admin
-        - { path: ^/admin, roles: ROLE_ADMIN }
-
-        # Tout ce qui commence par /api nécessite l'authentification
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
     security:

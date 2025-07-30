@@ -10,6 +10,12 @@
         {% block javascripts %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
+        <script>
+            // Désactiver Turbo pour éviter les problèmes de redirection
+            if (typeof Turbo !== 'undefined') {
+                Turbo.session.drive = false;
+            }
+        </script>
     </head>
     <body>
         {% block body %}{% endblock %}

@@ -2,54 +2,32 @@
 
 namespace App\Controller;
 
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class LoginController extends AbstractController
 {
-    #[Route('/login', name: 'user_login_form', methods: ['GET'])]
-        public function showLoginForm(): Response
-        {
-            return $this->render('login/login.html.twig', [
-                'error' => null
-            ]);
-        }
+    #[Route('/login', name: 'user_login_form', methods: ['GET', 'POST'])]
+    public function showLoginForm(AuthenticationUtils $authenticationUtils): Response
+    {
+        // Récupérer l'erreur de connexion s'il y en a une
+        $error = $authenticationUtils->getLastAuthenticationError();
 
+        // Récupérer le dernier nom d'utilisateur saisi par l'utilisateur
+        $lastUsername = $authenticationUtils->getLastUsername();
 
-    #[Route('/login', name: 'user_login', methods: ['POST'])]
-        public function login(
-            Request $request,
-            EntityManagerInterface $entityManager,
-            UserPasswordHasherInterface $passwordHasher
-        ): Response {
-            // Récupérer les données du formulaire (pas JSON)
-            $email = $request->request->get('email');
-            $password = $request->request->get('password');
+        return $this->render('login/login.html.twig', [
+            'last_username' => $lastUsername,
+            'error' => $error,
+        ]);
+    }
 
-            if (!$email || !$password) {
-                return $this->render('login/login.html.twig', [
-                    'error' => 'Email et mot de passe requis.'
-                ]);
-            }
-
-            // Rechercher l'utilisateur par email
-            $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-
-            if (!$user || !$passwordHasher->isPasswordValid($user, $password)) {
-                return $this->render('login/login.html.twig', [
-                    'error' => 'Identifiants invalides.'
-                ]);
-            }
-
-            // Connexion réussie : redirection vers une page protégée ou message
-            return $this->redirectToRoute('app');
-            
-        }
-
+    #[Route('/logout', name: 'app_logout', methods: ['GET'])]
+    public function logout(): void
+    {
+        // Cette méthode peut rester vide - elle sera interceptée par la clé logout dans security.yaml
+        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+    }
 }
