@@ -1,0 +1,125 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Groupes{% endblock %}
+
+{% block stylesheets %}
+<style>
+    .groups-container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+    }
+
+    .group-card {
+        background: white;
+        border: 1px solid #e1e8ed;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .group-members {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .member-avatar {
+        width: 30px;
+        height: 30px;
+        background: #e1e8ed;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 8px 15px;
+        border-radius: 20px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: #1da1f2;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="groups-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1>Mes groupes</h1>
+        <button class="btn btn-primary" onclick="showCreateGroupModal()">
+            Créer un groupe
+        </button>
+    </div>
+
+    <!-- Liste des groupes -->
+    {% if groups is defined and groups|length > 0 %}
+        {% for group in groups %}
+            <div class="group-card">
+                <div class="group-header">
+                    <h3 style="margin: 0;">{{ group.name }}</h3>
+                    <button class="btn btn-primary">Rejoindre le chat</button>
+                </div>
+                <p>{{ group.description }}</p>
+                <div class="group-members">
+                    {% for member in group.members|slice(0, 5) %}
+                        <div class="member-avatar" title="{{ member.name }}">
+                            👤
+                        </div>
+                    {% endfor %}
+                    {% if group.members|length > 5 %}
+                        <div class="member-avatar" style="background: #f8f9fa;">
+                            +{{ group.members|length - 5 }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="text-align: center; color: #657786;">Aucun groupe disponible.</p>
+    {% endif %}
+</div>
+
+<!-- Modal de création de groupe (caché par défaut) -->
+<div id="createGroupModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+    <div style="background: white; width: 400px; margin: 100px auto; padding: 20px; border-radius: 10px;">
+        <h2>Créer un nouveau groupe</h2>
+        <form method="POST" action="{{ path('create_group') }}">
+            <div style="margin-bottom: 15px;">
+                <label>Nom du groupe</label>
+                <input type="text" name="name" required style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Description</label>
+                <textarea name="description" rows="3" style="width: 100%; padding: 8px; margin-top: 5px;"></textarea>
+            </div>
+            <div style="text-align: right;">
+                <button type="button" onclick="hideCreateGroupModal()" style="margin-right: 10px;">Annuler</button>
+                <button type="submit" class="btn btn-primary">Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showCreateGroupModal() {
+    document.getElementById('createGroupModal').style.display = 'block';
+}
+
+function hideCreateGroupModal() {
+    document.getElementById('createGroupModal').style.display = 'none';
+}
+</script>
+{% endblock %}

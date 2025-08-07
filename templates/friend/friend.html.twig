@@ -1,0 +1,102 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="friends-container">
+    <h1>Mes amis</h1>
+
+    <!-- Formulaire de recherche -->
+    <div style="margin-bottom: 30px;">
+        <form method="GET" action="{{ path('friends_list') }}" class="search-form">
+            <input type="search" name="search" placeholder="Rechercher un utilisateur..."
+                   value="{{ searchTerm }}"
+                   style="width: 100%; padding: 10px; border-radius: 20px; border: 1px solid #e1e8ed;">
+        </form>
+    </div>
+
+    <!-- Résultats de recherche -->
+    {% if searchTerm is not empty %}
+        <div class="search-results" style="margin-bottom: 30px;">
+            <h3>Résultats de recherche</h3>
+            {% if searchResults is empty %}
+                <p style="color: #657786;">Aucun utilisateur trouvé pour "{{ searchTerm }}"</p>
+            {% else %}
+                {% for user in searchResults %}
+                    <div class="friend-card">
+                        <div class="friend-info">
+                            <div style="font-size: 24px;">👤</div>
+                            <div>
+                                <h3 style="margin: 0;">{{ user.name ?? user.email }}</h3>
+                            </div>
+                        </div>
+                        <div class="friend-actions">
+                            <a href="{{ path('add_friend', {'id': user.id}) }}" class="btn btn-primary">
+                                Ajouter en ami
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Demandes d'amitié en attente -->
+    {% if pendingRequests is not empty %}
+        <div class="pending-requests" style="margin-bottom: 30px;">
+            <h3>Demandes d'amitié en attente</h3>
+            {% for request in pendingRequests %}
+                {% set sender = request.user %}
+                <div class="friend-card">
+                    <div class="friend-info">
+                        <div style="font-size: 24px;">👤</div>
+                        <div>
+                            <h3 style="margin: 0;">{{ sender.name ?? sender.email }}</h3>
+                            <small style="color: #657786;">
+                                Demande envoyée le {{ request.createdAt|date('d/m/Y') }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <a href="{{ path('accept_friend', {'id': request.id}) }}" class="btn btn-primary">
+                            Accepter
+                        </a>
+                        <a href="{{ path('remove_friend', {'id': request.id}) }}" class="btn btn-outline">
+                            Refuser
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Liste des amis -->
+    <div class="friends-list">
+        <h3>Mes amis</h3>
+        {% if friends is empty %}
+            <p style="text-align: center; color: #657786;">Vous n'avez pas encore d'amis.</p>
+        {% else %}
+            {% for friendship in friends %}
+                {% set ami = (friendship.user.id == app.user.id) ? friendship.friend : friendship.user %}
+                <div class="friend-card">
+                    <div class="friend-info">
+                        <div style="font-size: 24px;">👤</div>
+                        <div>
+                            <h3 style="margin: 0;">{{ ami.name ?? ami.email }}</h3>
+                            <small style="color: #657786;">
+                                Ami depuis le {{ friendship.acceptedAt|date('d/m/Y') }}
+                            </small>
+                        </div>
+                    </div>
+                   <div class="friend-actions">
+    <a href="{{ path('friend_message', {'id': ami.id}) }}" class="btn btn-primary">
+        Message
+    </a>
+    <a href="{{ path('remove_friend', {'id': friendship.id}) }}" class="btn btn-outline">
+        Supprimer
+    </a>
+</div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

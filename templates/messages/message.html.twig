@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<h2>Conversation avec {{ friend.name ?? friend.email }}</h2>
+
+<div id="messages-container" style="border: 1px solid #ccc; padding: 15px; height: 400px; overflow-y: auto; margin-bottom: 20px;">
+    {% for message in messages %}
+        <div style="margin-bottom: 10px; {% if message.sender.id == app.user.id %}text-align: right;{% endif %}">
+            <strong>{{ message.sender.name ?? message.sender.email }}</strong> :
+            <span>{{ message.content|e }}</span>
+            <br>
+            <small style="color: #888;">{{ message.sendAt|date('d/m/Y H:i') }}</small>
+        </div>
+    {% else %}
+        <p>Aucun message dans cette conversation.</p>
+    {% endfor %}
+</div>
+
+<form method="POST" id="message-form">
+    <textarea name="content" rows="3" placeholder="Écrire un message..." required style="width: 100%; padding: 10px;"></textarea>
+    <button type="submit" style="margin-top: 10px;">Envoyer</button>
+</form>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    const roomId = "{{ roomId }}";
+    const myUserId = {{ app.user ? app.user.id : 'null' }};
+    const friendId = {{ friend.id }};
+
+    const socket = io('http://localhost:3000'); // ou http://127.0.0.1:3000 selon ta config CORS
+
+// Quand connecté, on s'enregistre avec notre userId
+socket.emit('register', myUserId);
+
+// Ecoute des messages privés
+socket.on('private_message', ({ from, content }) => {
+  console.log('Message privé reçu de', from, ':', content);
+  // Ici tu peux ajouter le message dans ta page HTML (ex: dans une div)
+  const messageBox = document.getElementById('messageBox');
+  if (messageBox) {
+    const p = document.createElement('p');
+    p.textContent = `De ${from} : ${content}`;
+    messageBox.appendChild(p);
+  }
+});
+
+// Envoi d’un message privé
+function sendMessage(toUserId, messageContent) {
+  socket.emit('private_message', {
+    to: toUserId,
+    from: myUserId,
+    content: messageContent
+  });
+}
+
+
+</script>
+
+{% endblock %}
